@@ -2,58 +2,43 @@ package com.treeforcom.clone.data;
 
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
-import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
+import androidx.lifecycle.MutableLiveData;
+import org.jetbrains.annotations.NotNull;
 
-import io.reactivex.Observable;
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.schedulers.Schedulers;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
 public abstract class NetworkBoundSource<ResultType> {
-//    private Observable<ResourceModel<ResultType>> result;
     private final MediatorLiveData<ResourceModel<ResultType>> result = new MediatorLiveData<>();
-
-
     @MainThread
     protected NetworkBoundSource() {
-        result.postValue(ResourceModel.loading());
-//        result = createCall()
-//                .subscribeOn(Schedulers.io())
-//                .doOnNext(ResourceModel::success)
-//                .doOnError(t -> ResourceModel.error(t.getMessage()))
-//                .onErrorResumeNext(t -> {
-//                    ResourceModel.error("");
-//                })
-//                .observeOn(AndroidSchedulers.mainThread());
+        result.setValue(ResourceModel.loading());
+        createCall().enqueue(new Callback<ResultType>() {
+            @Override
+            public void onResponse(@NotNull Call<ResultType> call, @NotNull Response<ResultType> response) {
+                if(response.isSuccessful()){
+                    if (response.body() != null) {
+                        result.setValue(ResourceModel.success(response.body()));
+                    }
+                }else {
+                    result.setValue(ResourceModel.error(response.message()));
+                }
+            }
 
+            @Override
+            public void onFailure(@NotNull Call<ResultType> call, @NotNull Throwable t) {
+                result.setValue(ResourceModel.error(t.getMessage()));
+            }
+        });
     }
-
-
-//    public Observable<ResourceModel<ResultType>> getAsObservable() {
-////        return result;
-////    }
-////    @NonNull
-////    @MainThread
-////    protected abstract Observable<ResourceModel<ResultType>> createCall();
-////
-////    @NonNull
-////    @MainThread
-////    protected abstract Observable<ResourceModel<ResponseError>> createCallFailed();
-
-    @MainThread
-    private void setValue( ResourceModel<ResultType> newValue) {
-        result.setValue(newValue);
-    }
-
 
     @NonNull
     @MainThread
-    protected abstract LiveData<ResultType> createCall();
+    protected abstract Call<ResultType> createCall();
 
-    public final LiveData<ResourceModel<ResultType>> getAsLiveData() {
+    public final MutableLiveData<ResourceModel<ResultType>> getAsLiveData() {
         return result;
     }
 }

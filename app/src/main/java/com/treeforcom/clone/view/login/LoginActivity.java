@@ -52,12 +52,20 @@ public class LoginActivity extends AppCompatActivity {
 
     private void initializeListener() {
         buttonLogin.setOnClickListener(v -> {
-            indicator.setVisibility(View.VISIBLE);
-            viewModel.authenticate(new LoginParam(
-                    editTextEmail.getText().toString(),
-                    editTextPass.getText().toString())
-            );
+            doAuthenticate();
+            doObservableLiveData();
         });
+    }
+
+    private void doObservableLiveData() {
+        viewModel.userResponseLiveData().observe(LoginActivity.this, this::render);
+    }
+
+    private void doAuthenticate(){
+        viewModel.authenticate(new LoginParam(
+                editTextEmail.getText().toString(),
+                editTextPass.getText().toString())
+        );
     }
 
     private void mapperView() {
@@ -84,14 +92,12 @@ public class LoginActivity extends AppCompatActivity {
 
     private void initializeViewModel() {
         viewModel = ViewModelProviders.of(this, modelFactory).get(LoginViewModel.class);
-        viewModel.userResponseLiveData().observe(LoginActivity.this, this::render);
     }
 
     private void render(ResourceModel<UserResponse> resource) {
         switch (resource.statusModel) {
             case LOADING: {
                 indicator.setVisibility(View.VISIBLE);
-
                 break;
             }
             case SUCCESS: {
@@ -101,7 +107,6 @@ public class LoginActivity extends AppCompatActivity {
             }
             case ERROR: {
                 indicator.setVisibility(View.GONE);
-
                 break;
             }
         }
